@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sofia Weather Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background-color: #f0f4f8;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .weather-container {
+      background: #fff;
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 90%;
+      max-width: 600px;
+      transition: all 0.3s ease;
+    }
+    .weather-container:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+    }
+    h1 {
+      margin-bottom: 10px;
+      color: #2c3e50;
+    }
+    .temp {
+      font-size: 3.5em;
+      font-weight: bold;
+      color: #3498db;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+    .details {
+      font-size: 1.1em;
+      margin-top: 15px;
+      line-height: 1.6;
+    }
+    .forecast-container {
+      margin-top: 25px;
+      display: flex;
+      justify-content: center;
+      flex-wrap: nowrap;
+      background: rgba(248, 250, 252, 0.8);
+      border-radius: 16px;
+      padding: 15px 5px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    }
+    .forecast-day {
+      background: linear-gradient(to bottom, #f8f9fa, #e9f0f8);
+      padding: 15px;
+      border-radius: 12px;
+      width: 100px;
+      margin: 0;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(52, 152, 219, 0.1);
+    }
+    .forecast-day:hover {
+      background: linear-gradient(to bottom, #e9f0f8, #d4e5f7);
+      transform: translateY(-5px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+      z-index: 1;
+    }
+    .forecast-day:not(:last-child) {
+      border-right: none;
+    }
+    .forecast-day:first-child {
+      border-radius: 12px 4px 4px 12px;
+    }
+    .forecast-day:last-child {
+      border-radius: 4px 12px 12px 4px;
+    }
+    .forecast-day strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #2c3e50;
+      font-size: 1.1em;
+    }
+    .forecast-day img {
+      filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+      transition: transform 0.3s ease;
+      margin: -5px 0;
+    }
+    .forecast-day:hover img {
+      transform: scale(1.1);
+    }
+    .forecast-day .temp {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #3498db;
+      margin: 5px 0;
+    }
+    .forecast-day .min-max {
+      font-size: 0.85em;
+      color: #7f8c8d;
+      margin: 5px 0;
+    }
+    .forecast-day small {
+      display: block;
+      font-size: 0.9em;
+      color: #34495e;
+    }
+    @media (max-width: 480px) {
+      .forecast-container {
+        gap: 5px;
+      }
+      .forecast-day {
+        width: 80px;
+        padding: 10px;
+        font-size: 0.9em;
+      }
+      .forecast-day img {
+        width: 35px;
+      }
+    }
+    .chart-container {
+      margin-top: 30px;
+      width: 100%;
+      height: 200px;
+    }
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(0,0,0,0.1);
+      border-radius: 50%;
+      border-top-color: #3498db;
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .last-updated {
+      font-size: 0.8em;
+      color: #7f8c8d;
+      margin-top: 15px;
+    }
+    .error-message {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+    @media (max-width: 480px) {
+      .forecast-container {
+        padding: 10px 3px;
+        overflow-x: auto;
+        justify-content: flex-start;
+      }
+      .forecast-day {
+        width: 80px;
+        padding: 10px;
+        font-size: 0.9em;
+        flex-shrink: 0;
+      }
+      .forecast-day img {
+        width: 35px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="weather-container">
+  <h1>🌤️ Sofia</h1>
+  <div id="loading"><div class="loading"></div></div>
+  <div class="temp" id="temp">--°C</div>
+  <div class="details">
+    <span id="condition">Loading...</span><br>
+    Humidity: <span id="humidity">--%</span><br>
+    Wind: <span id="wind">-- km/h</span><br>
+    Feels like: <span id="feels-like">--°C</span>
+  </div>
+  <div class="forecast-container" id="forecast"></div>
+  <div class="chart-container">
+    <canvas id="tempChart"></canvas>
+  </div>
+  <div class="last-updated" id="last-updated"></div>
+</div>
+
+<script>
+const apiKey = '0fdd1ad679a14066f247a80baad6222d';
+const currentURL = `https://api.openweathermap.org/data/2.5/weather?q=Sofia&units=metric&appid=${apiKey}`;
+const forecastURL = `https://api.openweathermap.org/data/2.5/forecast?q=Sofia&units=metric&appid=${apiKey}`;
+let tempChart;
+
+async function getWeather() {
+  try {
+    const res = await fetch(currentURL);
+    if (!res.ok) throw new Error(`Weather data not available (${res.status})`);
+    
+    const data = await res.json();
+    document.getElementById('temp').textContent = `${Math.round(data.main.temp)}°C`;
+    document.getElementById('condition').textContent = data.weather[0].description;
+    document.getElementById('humidity').textContent = `${data.main.humidity}%`;
+    document.getElementById('wind').textContent = `${(data.wind.speed * 3.6).toFixed(1)} km/h`;
+    document.getElementById('feels-like').textContent = `${Math.round(data.main.feels_like)}°C`;
+    
+    updateLastUpdated();
+    document.getElementById('loading').style.display = 'none';
+  } catch (error) {
+    console.error('Error fetching current weather:', error);
+    document.getElementById('temp').innerHTML = `<span class="error-message">Error loading data</span>`;
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+async function getForecast() {
+  try {
+    const res = await fetch(forecastURL);
+    if (!res.ok) throw new Error(`Forecast data not available (${res.status})`);
+    
+    const data = await res.json();
+    const forecastContainer = document.getElementById('forecast');
+    forecastContainer.innerHTML = '';
+
+    const dailyData = {};
+    const chartLabels = [];
+    const chartData = [];
+    const minTemps = [];
+    const maxTemps = [];
+
+    data.list.forEach(item => {
+      const date = new Date(item.dt * 1000);
+      const dateStr = date.toDateString();
+      
+      if (!dailyData[dateStr]) {
+        dailyData[dateStr] = {
+          temp: item.main.temp,
+          icon: item.weather[0].icon,
+          description: item.weather[0].main,
+          min: item.main.temp_min,
+          max: item.main.temp_max
+        };
+      } else {
+        // Track min/max temperatures
+        dailyData[dateStr].min = Math.min(dailyData[dateStr].min, item.main.temp_min);
+        dailyData[dateStr].max = Math.max(dailyData[dateStr].max, item.main.temp_max);
+      }
+    });
+
+    Object.entries(dailyData).slice(0, 5).forEach(([day, weather]) => {
+      const date = new Date(day);
+      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+      chartLabels.push(dayName);
+      chartData.push(Math.round(weather.temp));
+      minTemps.push(Math.round(weather.min));
+      maxTemps.push(Math.round(weather.max));
+      
+      const forecastEl = document.createElement('div');
+      forecastEl.classList.add('forecast-day');
+      const iconUrl = `https://openweathermap.org/img/wn/${weather.icon}@2x.png`;
+      forecastEl.innerHTML = `
+        <strong>${dayName}</strong>
+        <img src="${iconUrl}" alt="${weather.description}" width="50">
+        <div class="temp">${Math.round(weather.temp)}°C</div>
+        <div class="min-max">${Math.round(weather.min)}° / ${Math.round(weather.max)}°</div>
+        <small>${weather.description}</small>
+      `;
+      forecastContainer.appendChild(forecastEl);
+    });
+
+    updateChart(chartLabels, chartData, minTemps, maxTemps);
+  } catch (error) {
+    console.error('Error fetching forecast:', error);
+    document.getElementById('forecast').innerHTML = '<div class="error-message">Unable to load forecast</div>';
+  }
+}
+
+function updateChart(labels, tempData, minTemps, maxTemps) {
+  if (tempChart) {
+    tempChart.destroy();
+  }
+  
+  const ctx = document.getElementById('tempChart').getContext('2d');
+  tempChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Temperature (°C)',
+          data: tempData,
+          borderColor: '#3498db',
+          backgroundColor: 'rgba(52, 152, 219, 0.3)',
+          borderWidth: 2,
+          tension: 0.4,
+          pointBackgroundColor: '#3498db',
+          pointRadius: 4
+        },
+        {
+          label: 'Min Temp (°C)',
+          data: minTemps,
+          borderColor: '#2980b9',
+          backgroundColor: 'rgba(41, 128, 185, 0.1)',
+          borderWidth: 1,
+          tension: 0.4,
+          pointRadius: 0,
+          borderDash: [5, 5]
+        },
+        {
+          label: 'Max Temp (°C)',
+          data: maxTemps,
+          borderColor: '#e74c3c',
+          backgroundColor: 'rgba(231, 76, 60, 0.1)',
+          borderWidth: 1,
+          tension: 0.4,
+          pointRadius: 0,
+          borderDash: [5, 5]
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false
+        }
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: function(value) {
+              return value + '°C';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function updateLastUpdated() {
+  const now = new Date();
+  document.getElementById('last-updated').textContent = 
+    `Last updated: ${now.toLocaleTimeString()}`;
+}
+
+// Initialize the app
+function init() {
+  getWeather();
+  getForecast();
+  
+  // Refresh data every 30 minutes
+  setInterval(() => {
+    getWeather();
+    getForecast();
+  }, 30 * 60 * 1000);
+}
+
+// Start the app when DOM is loaded
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>
