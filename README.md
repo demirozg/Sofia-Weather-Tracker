@@ -33,17 +33,6 @@ The data is then processed and displayed in both text format and as an interacti
 
 The application uses the free tier of OpenWeatherMap API. The included API key has usage limitations. If you plan to use this code for your own purposes or deploy it publicly, please register for your own API key at [OpenWeatherMap](https://openweathermap.org/api).
 
-## Setup and Usage
-
-Simply open the `weather-dashboard.html` file in any modern web browser. No server or build process is required.
-
-## Browser Support
-
-The application works best in modern browsers including:
-- Chrome
-- Firefox
-- Safari
-- Edge
 
 ## Future Improvements
 
